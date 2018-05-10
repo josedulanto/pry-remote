@@ -1,4 +1,4 @@
 #!/usr/bin/env ruby
 
-require File.expand_path('../lib/pry/remote', __dir__)
+require_relative '../lib/pry/remote/cli'
 Pry::Remote::CLI.new.run

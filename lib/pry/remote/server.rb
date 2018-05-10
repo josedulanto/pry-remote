@@ -2,6 +2,8 @@ require 'drb'
 require 'open3'
 require 'pry'
 
+require_relative './client'
+
 class Pry
   module Remote
     class Server
@@ -19,7 +21,7 @@ class Pry
         @object  = object
         @options = options
 
-        @client = Pry::Remote::Client.new
+        @client = Client.new
         DRb.start_service uri, @client
       end
 
