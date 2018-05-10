@@ -12,8 +12,10 @@ class Pry
 
       def readline(prompt)
         case readline_arity
-        when 1 then input.readline(prompt)
-        else        input.readline
+        when 1
+          input.readline(prompt)
+        else
+          input.readline
         end
       end
 

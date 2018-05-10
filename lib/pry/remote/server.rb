@@ -15,8 +15,8 @@ class Pry
       end
 
       def initialize(object, host = DEFAULT_HOST, port = DEFAULT_PORT, options = {})
-        @host    = host
-        @port    = port
+        @host = host
+        @port = port
 
         @object  = object
         @options = options

@@ -4,13 +4,7 @@ class Pry
   module Remote
     # A client is used to retrieve information from the client program.
     class Client
-      def initilaize(input, output, thread, stdout, stderr)
-        @input = input
-        @output = output
-        @thread = thread
-        @stdout = stdout
-        @stderr = stderr
-      end
+      attr_accessor :editor, :input, :output, :stderr, :stdout, :thread
 
       # Waits until both an input and output are set
       def wait
