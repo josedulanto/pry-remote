@@ -1,4 +1,4 @@
 #!/usr/bin/env ruby
 
 require 'pry-remote'
-PryRemote::CLI.new.run
+Pry::Remote::CLI.new.run
