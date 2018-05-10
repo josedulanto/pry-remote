@@ -1,11 +1,4 @@
-require 'pry'
-
-require_relative './remote/server'
-
-class Pry
-  module Remote
-  end
-end
+require_relative '../pry/remote/server'
 
 class Object
   # Starts a remote Pry session
