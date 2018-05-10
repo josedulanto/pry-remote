@@ -4,35 +4,12 @@ require 'drb'
 require 'readline'
 require 'open3'
 
+require_relative './remote/input_proxy'
+
 class Pry
   module Remote
     DEFAULT_HOST = ENV['PRY_REMOTE_DEFAULT_HOST'] || '127.0.0.1'.freeze
     DEFAULT_PORT = ENV['PRY_REMOTE_DEFAULT_PORT'] || 9876
-
-    # A class to represent an input object created from DRb. This is used
-    # because Pry checks for arity to know if a prompt should be passed to
-    # the object.
-    #
-    # @attr [#readline] input Object to proxy
-    InputProxy = Struct.new :input do
-      # Reads a line from the input
-      def readline(prompt)
-        case readline_arity
-        when 1 then input.readline(prompt)
-        else        input.readline
-        end
-      end
-
-      def completion_proc=(val)
-        input.completion_proc = val
-      end
-
-      def readline_arity
-        input.method_missing(:method, :readline).arity
-      rescue NameError
-        0
-      end
-    end
 
     # Class used to wrap inputs so that they can be sent through DRb.
     #
