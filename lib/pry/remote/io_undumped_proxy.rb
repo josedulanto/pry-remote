@@ -1,3 +1,6 @@
+require 'drb'
+require 'readline'
+
 class Pry
   module Remote
     # Class used to wrap inputs so that they can be sent through DRb.

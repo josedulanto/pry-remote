@@ -1,3 +1,5 @@
+require_relative './input_proxy'
+
 class Pry
   module Remote
     # A client is used to retrieve information from the client program.

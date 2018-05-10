@@ -1,162 +1,16 @@
 require 'pry'
 require 'slop'
 require 'drb'
-require 'readline'
-require 'open3'
 
 require_relative './remote/client'
-require_relative './remote/input_proxy'
 require_relative './remote/io_undumped_proxy'
+require_relative './remote/server'
 
 class Pry
   module Remote
-    DEFAULT_HOST = ENV['PRY_REMOTE_DEFAULT_HOST'] || '127.0.0.1'.freeze
-    DEFAULT_PORT = ENV['PRY_REMOTE_DEFAULT_PORT'] || 9876
-
-    # Ensure that system (shell command) output is redirected for remote session.
-    System = proc do |output, cmd, _|
-      status = nil
-      Open3.popen3 cmd do |stdin, stdout, stderr, wait_thr|
-        stdin.close # Send EOF to the process
-
-        until stdout.eof? and stderr.eof?
-          if res = IO.select([stdout, stderr])
-            res[0].each do |io|
-              next if io.eof?
-              output.write io.read_nonblock(1024)
-            end
-          end
-        end
-
-        status = wait_thr.value
-      end
-
-      unless status.success?
-        output.puts "Error while executing command: #{cmd}"
-      end
-    end
-
     ClientEditor = proc do |initial_content, line|
       # Hack to use Pry::Editor
       Pry::Editor.new(Pry.new).edit_tempfile_with_content(initial_content, line)
-    end
-
-    class Server
-      def self.run(object, host = DEFAULT_HOST, port = DEFAULT_PORT, options = {})
-        new(object, host, port, options).run
-      end
-
-      def initialize(object, host = DEFAULT_HOST, port = DEFAULT_PORT, options = {})
-        @host    = host
-        @port    = port
-
-        @object  = object
-        @options = options
-
-        @client = Pry::Remote::Client.new
-        DRb.start_service uri, @client
-      end
-
-      # Code that has to be called for Pry-remote to work properly
-      def setup
-        @hooks = Pry::Hooks.new
-
-        @hooks.add_hook :before_eval, :pry_remote_capture do
-          capture_output
-        end
-
-        @hooks.add_hook :after_eval, :pry_remote_uncapture do
-          uncapture_output
-        end
-
-        # Before Pry starts, save the pager config.
-        # We want to disable this because the pager won't do anything useful in
-        # this case (it will run on the server).
-        Pry.config.pager, @old_pager = false, Pry.config.pager
-
-        # As above, but for system config
-        Pry.config.system, @old_system = Pry::Remote::System, Pry.config.system
-
-        Pry.config.editor, @old_editor = editor_proc, Pry.config.editor
-      end
-
-      # Code that has to be called after setup to return to the initial state
-      def teardown
-        # Reset config
-        Pry.config.editor = @old_editor
-        Pry.config.pager  = @old_pager
-        Pry.config.system = @old_system
-
-        puts "[pry-remote] Remote session terminated"
-
-        begin
-          @client.kill
-        rescue DRb::DRbConnError
-          puts "[pry-remote] Continuing to stop service"
-        ensure
-          puts "[pry-remote] Ensure stop service"
-          DRb.stop_service
-        end
-      end
-
-      # Captures $stdout and $stderr if so requested by the client.
-      def capture_output
-        @old_stdout, $stdout = if @client.stdout
-                                 [$stdout, @client.stdout]
-                               else
-                                 [$stdout, $stdout]
-                               end
-
-        @old_stderr, $stderr = if @client.stderr
-                                 [$stderr, @client.stderr]
-                               else
-                                 [$stderr, $stderr]
-                               end
-      end
-
-      # Resets $stdout and $stderr to their previous values.
-      def uncapture_output
-        $stdout = @old_stdout
-        $stderr = @old_stderr
-      end
-
-      def editor_proc
-        proc do |file, line|
-          File.write(file, @client.editor.call(File.read(file), line))
-        end
-      end
-
-      # Actually runs pry-remote
-      def run
-        puts "[pry-remote] Waiting for client on #{uri}"
-        @client.wait
-
-        puts "[pry-remote] Client received, starting remote session"
-        setup
-
-        Pry.start(@object, @options.merge(:input => client.input_proxy,
-                                          :output => client.output,
-                                          :hooks => @hooks))
-      ensure
-        teardown
-      end
-
-      # @return Object to enter into
-      attr_reader :object
-
-      # @return [PryServer::Client] Client connecting to the pry-remote server
-      attr_reader :client
-
-      # @return [String] Host of the server
-      attr_reader :host
-
-      # @return [Integer] Port of the server
-      attr_reader :port
-
-      # @return [String] URI for DRb
-      def uri
-        "druby://#{host}:#{port}"
-      end
     end
 
     # Parses arguments and allows to start the client.
@@ -165,10 +19,10 @@ class Pry
         params = Slop.parse args, :help => true do
           banner "#$PROGRAM_NAME [OPTIONS]"
 
-          on :s, :server=, "Host of the server (#{DEFAULT_HOST})", :argument => :optional,
-             :default => DEFAULT_HOST
-          on :p, :port=, "Port of the server (#{DEFAULT_PORT})", :argument => :optional,
-             :as => Integer, :default => DEFAULT_PORT
+          on :s, :server=, "Host of the server (#{Server::DEFAULT_HOST})", :argument => :optional,
+             :default => Server::DEFAULT_HOST
+          on :p, :port=, "Port of the server (#{Server::DEFAULT_PORT})", :argument => :optional,
+             :as => Integer, :default => Server::DEFAULT_PORT
           on :w, :wait, "Wait for the pry server to come up",
              :default => false
           on :r, :persist, "Persist the client to wait for the pry server to come up each time",
@@ -273,7 +127,7 @@ class Object
   # @param [String]  host Host of the server
   # @param [Integer] port Port of the server
   # @param [Hash] options Options to be passed to Pry.start
-  def remote_pry(host = Pry::Remote::DEFAULT_HOST, port = Pry::Remote::DEFAULT_PORT, options = {})
+  def remote_pry(host = Pry::Remote::Server::DEFAULT_HOST, port = Pry::Remote::Server::DEFAULT_PORT, options = {})
     Pry::Remote::Server.new(self, host, port, options).run
   end
 
