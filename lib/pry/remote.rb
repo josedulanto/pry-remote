@@ -6,11 +6,12 @@ require 'open3'
 
 class Pry
   module Remote
-    DefaultHost = ENV['PRY_REMOTE_DEFAULT_HOST'] || "127.0.0.1"
-    DefaultPort = ENV['PRY_REMOTE_DEFAULT_PORT'] || 9876
+    DEFAULT_HOST = ENV['PRY_REMOTE_DEFAULT_HOST'] || '127.0.0.1'.freeze
+    DEFAULT_PORT = ENV['PRY_REMOTE_DEFAULT_PORT'] || 9876
 
-    # A class to represent an input object created from DRb. This is used because
-    # Pry checks for arity to know if a prompt should be passed to the object.
+    # A class to represent an input object created from DRb. This is used
+    # because Pry checks for arity to know if a prompt should be passed to
+    # the object.
     #
     # @attr [#readline] input Object to proxy
     InputProxy = Struct.new :input do
@@ -141,11 +142,11 @@ class Pry
     end
 
     class Server
-      def self.run(object, host = DefaultHost, port = DefaultPort, options = {})
+      def self.run(object, host = DEFAULT_HOST, port = DEFAULT_PORT, options = {})
         new(object, host, port, options).run
       end
 
-      def initialize(object, host = DefaultHost, port = DefaultPort, options = {})
+      def initialize(object, host = DEFAULT_HOST, port = DEFAULT_PORT, options = {})
         @host    = host
         @port    = port
 
@@ -264,10 +265,10 @@ class Pry
         params = Slop.parse args, :help => true do
           banner "#$PROGRAM_NAME [OPTIONS]"
 
-          on :s, :server=, "Host of the server (#{DefaultHost})", :argument => :optional,
-             :default => DefaultHost
-          on :p, :port=, "Port of the server (#{DefaultPort})", :argument => :optional,
-             :as => Integer, :default => DefaultPort
+          on :s, :server=, "Host of the server (#{DEFAULT_HOST})", :argument => :optional,
+             :default => DEFAULT_HOST
+          on :p, :port=, "Port of the server (#{DEFAULT_PORT})", :argument => :optional,
+             :as => Integer, :default => DEFAULT_PORT
           on :w, :wait, "Wait for the pry server to come up",
              :default => false
           on :r, :persist, "Persist the client to wait for the pry server to come up each time",
@@ -372,7 +373,7 @@ class Object
   # @param [String]  host Host of the server
   # @param [Integer] port Port of the server
   # @param [Hash] options Options to be passed to Pry.start
-  def remote_pry(host = Pry::Remote::DefaultHost, port = Pry::Remote::DefaultPort, options = {})
+  def remote_pry(host = Pry::Remote::DEFAULT_HOST, port = Pry::Remote::DEFAULT_PORT, options = {})
     Pry::Remote::Server.new(self, host, port, options).run
   end
 
