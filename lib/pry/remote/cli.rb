@@ -8,66 +8,39 @@ require_relative './server'
 
 class Pry
   module Remote
-    # Parses arguments and allows to start the client.
     class CLI
-      def initialize(args = ARGV)
-        params = Slop.parse args, :help => true do
-          banner "#$PROGRAM_NAME [OPTIONS]"
+      attr_reader :args, :capture, :host, :persist, :port, :wait
 
-          on :s, :server=, "Host of the server (#{Server::DEFAULT_HOST})", :argument => :optional,
-             :default => Server::DEFAULT_HOST
-          on :p, :port=, "Port of the server (#{Server::DEFAULT_PORT})", :argument => :optional,
-             :as => Integer, :default => Server::DEFAULT_PORT
-          on :w, :wait, "Wait for the pry server to come up",
-             :default => false
-          on :r, :persist, "Persist the client to wait for the pry server to come up each time",
-             :default => false
-          on :c, :capture, "Captures $stdout and $stderr from the server (true)",
-             :default => true
-          on :f, "Disables loading of .pryrc and its plugins, requires, and command history "
-        end
-
-        exit if params.help?
-
-        @host = params[:server]
-        @port = params[:port]
-
-        @wait = params[:wait]
-        @persist = params[:persist]
-        @capture = params[:capture]
-
-        Pry.initial_session_setup unless params[:f]
-      end
-
-      # @return [String] Host of the server
-      attr_reader :host
-
-      # @return [Integer] Port of the server
-      attr_reader :port
-
-      # @return [String] URI for DRb
-      def uri
-        "druby://#{host}:#{port}"
-      end
-
-      attr_reader :wait
-      attr_reader :persist
-      attr_reader :capture
       alias wait? wait
       alias persist? persist
       alias capture? capture
 
+      def initialize(args = ARGV)
+        @args = args
+
+        exit if options.help?
+
+        @host = options[:server]
+        @port = options[:port]
+
+        @capture = options[:capture]
+        @persist = options[:persist]
+        @wait = options[:wait]
+
+        Pry.initial_session_setup unless options[:f]
+      end
+
       def run
-        while true
+        loop do
           connect
           break unless persist?
         end
       end
 
-      # Connects to the server
-      #
-      # @param [IO] input  Object holding input for pry-remote
-      # @param [IO] output Object pry-debug will send its output to
+      def uri
+        "druby://#{host}:#{port}"
+      end
+
       def connect(input = Pry.config.input, output = Pry.config.output)
         local_ip = UDPSocket.open {|s| s.connect(@host, 1); s.addr.last}
         DRb.start_service "druby://#{local_ip}:0"
@@ -113,6 +86,21 @@ class Pry
           # This is a hack to close the connection of DRb.
           client.cleanup
         rescue DRb::DRbConnError, NoMethodError
+        end
+      end
+
+      private
+
+      def options
+        @options ||= Slop.parse args, help: true do
+          banner "#$PROGRAM_NAME [OPTIONS]"
+
+          on :s, :server=, "Host of the server (#{Server::DEFAULT_HOST})", argument: :optional, default: Server::DEFAULT_HOST
+          on :p, :port=, "Port of the server (#{Server::DEFAULT_PORT})", argument: :optional, as: Integer, default: Server::DEFAULT_PORT
+          on :w, :wait, 'Wait for the pry server to come up', default: false
+          on :r, :persist, 'Persist the client to wait for the pry server to come up each time', default: false
+          on :c, :capture, 'Captures $stdout and $stderr from the server (true)', default: true
+          on :f, 'Disables loading of .pryrc and its plugins, requires, and command history '
         end
       end
     end

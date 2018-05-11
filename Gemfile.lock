@@ -1,0 +1,25 @@
+PATH
+  remote: .
+  specs:
+    pry-remote (0.1.8)
+      pry (~> 0.11)
+      slop (~> 4.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    coderay (1.1.2)
+    method_source (0.9.0)
+    pry (0.11.3)
+      coderay (~> 1.1.0)
+      method_source (~> 0.9.0)
+    slop (4.6.2)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  pry-remote!
+
+BUNDLED WITH
+   1.16.1
